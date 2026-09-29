@@ -1,0 +1,8 @@
+# build output
+dist/
+src/bin/
+src/obj/
+
+# scratch / test fixtures
+.tmp/
+*.user
