@@ -52,6 +52,14 @@ jobs:
           if-no-files-found: error
 
       # ── 'beta' release: always points at the newest good build of main ───────
+      - name: Move the beta tag to this build
+        if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+        continue-on-error: true      # tag protection rules may forbid moving it; the release still updates
+        shell: pwsh
+        run: |
+          git tag -f beta $env:GITHUB_SHA
+          git push -f origin "refs/tags/beta"
+
       - name: Update beta release
         if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
         uses: softprops/action-gh-release@v2
