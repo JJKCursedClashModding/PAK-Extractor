@@ -1,183 +1,137 @@
-# JJKCC-Unpacker
+# PAK-Extractor
 
-A small, dependency-free Windows tool that does the same thing as
-**JJK Mod Kit → Setup → Import Game Assets** in the
-[JujutsuKaisenCC](https://github.com/) Unreal project — without having to open the editor
-first.
+Unpacks the game files of **Jujutsu Kaisen Cursed Clash** into the
+[UE5 Mod Kit](https://github.com/JJKCursedClashModding/UE5-Mod-Kit) project so you can edit them.
 
-It is a single ~120 KB `JJKCC-Unpacker.exe` (WinForms, .NET Framework 4.8, which ships with
-Windows) with three things in the window: an **input path**, an **output path** and a
-**progress** display.
+It does the same job as **JJK Mod Kit → Setup → Import Game Assets**, but as a separate program —
+so the editor doesn't sit frozen for 5–15 minutes while the game's paks are unpacked.
 
-```
-┌ JJK CC — Import Game Assets ──────────────────────────────────────────────┐
-│ Input path  — Jujutsu Kaisen CC.exe, a game .pak, or the Content\Paks folder
-│ [ C:\...\Jujutsu Kaisen CC.exe                        ] [File…] [Folder…]
-│ Output path — the Unreal project folder (or its Content folder)
-│ [ C:\...\JujutsuKaisenCC                              ] [Folder…]
-│ Paks: C:\...\Content\Paks      Content: C:\...\JujutsuKaisenCC\Content
-│ Step 1 / 6 — retoc: 12,345 / 49,404 files (25.0%)            [00:42]
-│ [██████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░]
-│ Progress log …                                            [Start Import]
-└───────────────────────────────────────────────────────────────────────────┘
-```
+![The PAK-Extractor window](docs/screenshot.png)
+
+**➜ [Download `JJKCC-Unpacker.exe`](https://github.com/JJKCursedClashModding/PAK-Extractor/releases/download/beta/JJKCC-Unpacker.exe)**
+([release page](https://github.com/JJKCursedClashModding/PAK-Extractor/releases/tag/beta)) —
+Windows 10/11, nothing to install.
 
 ---
 
-## What it does
+## Before you start
 
-Exactly the six steps of the in-editor pipeline, in the same order:
+* **The game** — installed via Steam. The tool reads its pak files.
+* **The [UE5 Mod Kit](https://github.com/JJKCursedClashModding/UE5-Mod-Kit)** — cloned and built
+  once, following its README. Do this first: the extractor imports into that project.
+* **About 50 GB of free disk space** on the drive that holds the game. It is only used while
+  importing, and freed again at the end.
+* **Close the Unreal Editor.** The import starts the editor in the background for one of its
+  steps, and it can't do that while the editor is already open.
 
-| # | Step | Detail |
-|---|------|--------|
-| 1 | **Unpack** | `retoc --aes-key <key> to-legacy . Data` inside the game's `Content\Paks`, producing loose files in `Paks\Data\Jujutsu Kaisen CC\Content` |
-| 2 | **ABP stubs** | Creates a stub `AnimBlueprint` for every `ABP_*` / `*_ABP` found in the extracted content, via the project's own `stub_abp_from_folder.py` run in a **headless** `UnrealEditor-Cmd.exe` (nothing to click; it is skipped automatically when it cannot work) |
-| 3 | **Delete ABPs** | Removes every `ABP_*` / `*_ABP` file (and its `.uexp`/`.ubulk` companions) from `Data`, plus `Content\Editor\ACLPlugin` |
-| 4 | **Delete capture WPBs** | Removes `WBP_CharacterCaptureEnemy`, `WBP_CharacterCapturePlayer`, `WBP_CharacterCaptureSimple` from `Data\...\Widgets\Commons` |
-| 5 | **Move** | Moves the extracted `Content` tree into the output folder, per-file progress, overwriting existing files |
-| 6 | **Clean up** | Deletes the temporary `Paks\Data` folder (the ~50 GB) |
+## Use it
 
-Expect step 1 to take 5–15 minutes and ~50 GB of free space on the drive that holds the game.
-The editor is not required for steps 1 and 3–6; step 2 is skipped (with a clear note in the log)
-when `UnrealEditor-Cmd.exe`, the project, or the skeletons are missing.
+1. Run `JJKCC-Unpacker.exe`.
+2. Check the two paths — both are filled in for you, usually nothing to change:
+   * **Input path** — `Jujutsu Kaisen CC.exe`, normally in
+     `C:\Program Files (x86)\Steam\steamapps\common\Jujutsu Kaisen CC\Jujutsu Kaisen CC\Binaries\Win64\`
+   * **Output path** — your mod kit folder, the one containing `JujutsuKaisenCC.uproject`
+3. Press **Start Import** and confirm with **Yes**.
+
+Then leave it alone for 5–15 minutes. The bar and the log show what it is doing.
+
+### Afterwards, in the editor
+
+1. **Restart the editor** — imported assets only appear in the Content Browser on start-up.
+2. Run **JJK Mod Kit → Asset Tools → Stub Character-Capture WBPs** once. The import removes
+   three capture widgets that would crash the editor; this puts placeholders back in their place.
+
+You're done — start modding with **JJK Mod Kit → New Mod**. More in the mod kit's README and the
+[modding wiki](https://github.com/JJKCursedClashModding/Wiki).
+
+## What the import does
+
+| Step | |
+|---|---|
+| 1 | Unpacks the game's paks with **retoc** (this is the slow part) |
+| 2 | Creates **AnimBlueprint stubs** for every animation blueprint, in the project |
+| 3 | Deletes the original animation blueprints, which crash the editor as-is |
+| 4 | Deletes the three character-capture widgets, which also crash the editor |
+| 5 | Moves everything into the project's `Content` folder |
+| 6 | Deletes the temporary files, giving you the disk space back |
+
+## If something goes wrong
+
+| Problem | Fix |
+|---|---|
+| "Could not find a Content\Paks folder" | The input path is wrong. Point it at `Jujutsu Kaisen CC.exe`. |
+| "retoc.exe was not found" | Put `retoc.exe` and `oo2core_9_win64.dll` in the mod kit's `Tools\` folder. Get retoc from its [releases page](https://github.com/trumank/retoc/releases) if you don't have it. |
+| retoc fails part-way through | Close the game, then verify the game files in Steam and try again. |
+| Step 2 is skipped (animation blueprints missing) | The editor was open, or the mod kit wasn't built yet. Build it, then run **JJK Mod Kit → Asset Tools → Stub ABP From Folder** in the editor. |
+| Imported assets don't show up | Restart the editor. |
+| Anything else | Press **Log folder** in the window and read the newest log, or ask in the [wiki](https://github.com/JJKCursedClashModding/Wiki). |
 
 ---
 
-## Requirements
+# Development
 
-* Windows 10/11 (x64).
-* The game installed via Steam (or anywhere else — point the input at the install).
-* `retoc.exe` **plus `oo2core_9_win64.dll`** — normally `<project>\Tools\retoc.exe`; the tool
-  also looks next to itself, in `.\Tools`, next to the paks, on `PATH`, or at `%RETOC%`.
-* Unreal Engine 5.1 (only for step 2) — found through `%UNREAL_EDITOR_CMD%`, the project's
-  JJK Mod Kit settings, the Epic Launcher registry entries, or `C:\Program Files\Epic Games\UE_5.*`.
-* .NET Framework 4.8 (preinstalled on Windows 10 1903+).
-
----
-
-## Build
+### Build from source
 
 ```cmd
 build.cmd
 ```
 
-The exe lands in `dist\JJKCC-Unpacker.exe`. The build uses the .NET SDK (`dotnet build`) to
-compile `src\JJKCC-Unpacker.csproj` for `net48`, so the result is a small framework-dependent
-binary with no runtime to install.
-
-Regenerate the icon with `python tools\make_icon.py` if you change it.
-
-### Continuous integration
-
-`.github/workflows/build.yml` builds the exe on `windows-latest`, runs the smoke test, and
-uploads it as a workflow artifact. On every push to `main` (and on manual runs) it also
-**creates or updates the [`beta` release](../../releases/tag/beta)** with the freshly built
-`JJKCC-Unpacker.exe`, so
-
-```
-https://github.com/JJKCursedClashModding/PAK-Extractor/releases/download/beta/JJKCC-Unpacker.exe
-```
-
-always points at the newest good build. Pushing a `v*` tag additionally creates a normal
-versioned release with the same asset.
-
-Creating releases needs workflow write access — if the release step ever fails with a 403, set
-**Settings → Actions → General → Workflow permissions → Read and write permissions**.
-
-Run the same checks locally with:
-
-```powershell
-pwsh tools\smoke-test.ps1
-```
-
----
-
-## Usage
-
-### Window
-
-1. **Input path** — the game's `Jujutsu Kaisen CC.exe`, any `.pak` in `Content\Paks`, the
-   `Content\Paks` folder, or the game root. `File…`/`Folder…` browse, or paste a path.
-2. **Output path** — the Unreal project folder (the one with the `.uproject`). Its `Content`
-   folder is used. You can also point it at any `Content` folder to do a standalone unpack.
-3. Press **Start Import**, read the confirmation, and watch the progress.
-
-Both fields are pre-filled: the output from the last run (or the first
-`…\Documents\Unreal Projects\*` folder that has a `.uproject`), and the input from the project's
-stored Game Exe Path (or the default Steam location).
-
-Every run writes a full log to `%LOCALAPPDATA%\JJKCC-Unpacker\logs\` (the **Log folder** button
-opens it).
-
-If a `Data` folder is left over from a previous run, a dialog offers to **reuse** it (skip the
-slow unpack) or **delete** it and unpack from scratch.
+Produces `dist\JJKCC-Unpacker.exe` (a ~120 KB `net48` WinForms binary — Windows ships the
+runtime). Needs only the .NET SDK. `tools\make_icon.py` regenerates the icon,
+`tools\smoke-test.ps1` runs the same checks as CI.
 
 ### Command line
 
-```cmd
-JJKCC-Unpacker.exe --cli --input "<game exe or paks>" --output "<project folder>" ^
-                   [--no-stubs] [--reuse-data | --fresh] [--quiet]
-```
-
-Useful extras:
+The window is the normal way to use this, but every run is scriptable:
 
 ```cmd
-:: check that retoc, the AES key and the install work — nothing is written
-JJKCC-Unpacker.exe --verify-paks --input "<game exe>" --output "<project folder>"
-
-:: print everything that would happen, change nothing
-JJKCC-Unpacker.exe --dry-run --input "<game exe>" --output "<project folder>"
-
-JJKCC-Unpacker.exe --help
+JJKCC-Unpacker.exe --cli --input "<game exe or paks>" --output "<project folder>" [options]
 ```
+
+| Option | |
+|---|---|
+| `--dry-run` | Resolve everything and print the plan, change nothing |
+| `--verify-paks` | Let retoc read the paks without writing anything (checks retoc, the AES key and the install; stops after step 1) |
+| `--no-stubs` | Skip the headless-editor AnimBlueprint step |
+| `--reuse-data` / `--fresh` | Reuse or discard an existing `Paks\Data` folder |
+| `--quiet`, `--help` | |
 
 Exit codes: `0` success, `1` failed, `2` cancelled, `3` finished with warnings.
 
-From PowerShell, wait for the process (`Start-Process -Wait`) — like any GUI-subsystem exe it
-does not block the prompt by itself. In `cmd.exe` use `start /wait`.
+### Continuous integration
 
----
+`.github/workflows/build.yml` builds and smoke-tests the exe on `windows-latest`, uploads it as a
+workflow artifact, and on every push to `main` updates the **`beta` release** with the new binary
+and moves the `beta` tag to that commit. Pushing a `v*` tag creates a normal versioned release.
 
-## Where paths and tools come from
+### How paths and tools are found
 
-* **Paks folder** — derived from the picked `.exe` (`<exe>\..\..\..\Content\Paks`, then any
-  parent that has one) or by walking up from a picked `.pak` / folder.
-* **Content folder** — `<project root>\Content` when the output folder (or a parent) contains a
-  `.uproject`, otherwise the output folder itself.
+* **Paks folder** — from the picked `.exe` (`<exe>\..\..\..\Content\Paks`, then any parent that has
+  one), or by walking up from a picked `.pak` / folder.
+* **Content folder** — `<project>\Content` when the output folder (or a parent) has a `.uproject`,
+  otherwise the output folder itself.
 * **retoc** — `%RETOC%`, next to the exe, `<exe>\Tools`, `<project>\Tools`, the paks folder, `PATH`.
 * **UnrealEditor-Cmd** — `%UNREAL_EDITOR_CMD%`, the project's JJK Mod Kit setting
   (`UeEditorCmdPath`), `HKLM\SOFTWARE\EpicGames\Unreal Engine\<version>`, then
   `C:\Program Files\Epic Games\UE_5.*`.
 
----
+If an existing `Paks\Data` folder is found, a dialog offers to reuse it (fast, for a re-run) or to
+delete it and unpack from scratch.
 
-## Troubleshooting
-
-| Symptom | Fix |
-|---|---|
-| `retoc.exe was not found` | Put `retoc.exe` + `oo2core_9_win64.dll` in `<project>\Tools`, or set `%RETOC%` |
-| `Could not find a Content\Paks folder…` | Point the input at `Jujutsu Kaisen CC.exe` or at `…\Content\Paks` |
-| retoc exits with a non-zero code | Close the game (locked paks), check the log; `--verify-paks` isolates retoc from everything else |
-| Step 2 is skipped | No `UnrealEditor-Cmd.exe` found, the editor was already running, or the project has no skeletons yet. Run **JJK Mod Kit → Asset Tools → Stub ABP From Folder** inside the editor afterwards |
-| Assets missing in the Content Browser | Restart the editor — it indexes `Content` on startup |
-| `retoc` progress bar stays at 0 % for a while | Normal: retoc hides its progress bar when its output is piped, so the bar animates instead |
-
----
-
-## Layout
+### Layout
 
 ```
-build.cmd                  one-command build -> dist\JJKCC-Unpacker.exe
-.github\workflows\build.yml  CI: build + smoke test + 'beta' release
-src\JJKCC-Unpacker.csproj  net48 WinForms project
-src\Program.cs             entry point, CLI parsing, console attach, --diag
-src\MainForm.cs            the window: input / output / progress
-src\Pipeline.cs            the six steps
-src\PathLogic.cs           path + tool discovery (mirrors the project's Python)
-src\Fs.cs                  long-path-safe file helpers
-src\AppSettings.cs         saved paths + run logs
-src\Dpi.cs                 per-monitor DPI helpers
-src\app.manifest           DPI awareness, long paths, asInvoker
-tools\make_icon.py         icon generator
-tools\smoke-test.ps1       build smoke test (also used by CI)
+build.cmd                     build -> dist\JJKCC-Unpacker.exe
+.github\workflows\build.yml   CI: build, smoke test, beta release
+src\JJKCC-Unpacker.csproj     net48 WinForms project
+src\Program.cs                entry point, CLI parsing, --diag
+src\MainForm.cs               the window: input / output / progress
+src\Pipeline.cs               the six steps
+src\PathLogic.cs              path + tool discovery (mirrors the project's Python)
+src\Fs.cs                     long-path-safe file helpers
+src\AppSettings.cs            saved paths + run logs
+src\Dpi.cs                    per-monitor DPI helpers
+src\app.manifest              DPI awareness, long paths, asInvoker
+tools\make_icon.py            icon generator
+tools\smoke-test.ps1          smoke test used by CI and locally
 ```
